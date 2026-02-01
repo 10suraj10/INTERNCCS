@@ -1,68 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import '../viewmodels/exercise_viewmodel.dart';
+import 'add_mcq_screen.dart';
+import 'add_question_screen.dart';
+import 'question_bank_screen.dart';
 
 class TeacherDashboard extends StatelessWidget {
   const TeacherDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ExerciseViewModel>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Teacher Dashboard"),
         actions: [
-          IconButton(
+          // This is the Logout button you asked for
+          TextButton.icon(
             onPressed: () => context.read<AuthViewModel>().logout(),
             icon: const Icon(Icons.logout),
+            label: const Text("Logout"),
+            style: TextButton.styleFrom(foregroundColor: Colors.black),
           ),
         ],
       ),
-      body: vm.exercises.isEmpty
-          ? const Center(child: Text("No exercises added"))
-          : ListView.builder(
-              itemCount: vm.exercises.length,
-              itemBuilder: (_, i) => ListTile(
-                title: Text(vm.exercises[i].title),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Management Tools",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+
+            // GridView creates the side-by-side buttons (Cards)
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2, // 2 items per row
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                children: [
+                  _buildMenuCard(
+                    context,  "MCQ Question",
+                    Icons.quiz,
+                    Colors.blue,
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddMcqScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    "Questions",
+                    Icons.description,
+                    Colors.green,
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddQuestionScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    "Question Bank",
+                    Icons.storage,
+                    Colors.orange,
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const QuestionBankScreen()),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addExerciseDialog(context),
-        child: const Icon(Icons.add),
+          ],
+        ),
       ),
     );
   }
 
-  void _addExerciseDialog(BuildContext context) {
-    final controller = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Add Exercise"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: "Enter exercise title",
-          ),
+  // A helper function to create buttons easily
+  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                context.read<ExerciseViewModel>().addExercise(controller.text);
-              }
-              Navigator.pop(context);
-            },
-            child: const Text("Add"),
-          ),
-        ],
       ),
     );
   }

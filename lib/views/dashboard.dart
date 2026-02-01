@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/exam_viewmodel.dart';
-import 'exam_list_view.dart';
-import 'program_list_view.dart';
+import 'mcq_exam_view.dart';
+import 'student_question_bank_view.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -12,7 +12,17 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  int tab = 0;
+  @override
+  void initState() {
+    super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    Future.microtask(() =>
+        context.read<ExamViewModel>().loadQuestionBank()
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,67 +31,93 @@ class _DashboardState extends State<Dashboard> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
-      body: Column(
-        children: [
-          // HEADER
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-            color: Colors.white,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text("Student Dashboard",
-                          style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text("Welcome back",
-                          style: TextStyle(color: Colors.grey)),
-                    ]),
-                TextButton.icon(
-                    onPressed: () => auth.logout(),
-                    icon: const Icon(Icons.logout),
-                    label: const Text("Logout")),
-              ],
-            ),
+      appBar: AppBar(
+        title: const Text("Student Dashboard"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        actions: [
+          IconButton(
+            onPressed: _refreshData,
+            icon: const Icon(Icons.refresh),
           ),
-
-          const SizedBox(height: 16),
-
-          Center(
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProgramListView()),
-                );
-              },
-              child: const Text("Start Exam"),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // CONTENT
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12)),
-              child: tab == 0 ? const ExamListView() : _results(),
-            ),
-          ),
+          TextButton.icon(
+              onPressed: () => auth.logout(),
+              icon: const Icon(Icons.logout),
+              label: const Text("Logout")),
         ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Welcome back,",
+                style: TextStyle(color: Colors.grey, fontSize: 16)),
+            const Text("Student",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 24),
+            
+            // Grid of Actions
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                children: [
+                  _buildMenuCard(
+                    context,
+                    "MCQ Questions",
+                    Icons.quiz,
+                    Colors.blue,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MCQExamView()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
+                    "Question Bank",
+                    Icons.storage,
+                    Colors.orange,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const StudentQuestionBankView()),
+                      );
+                    },
+                    subtitle: "${exams.bankQuestions.length} Items",
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _results() {
-    return const Center(
-        child: Text("No results yet", style: TextStyle(color: Colors.grey)));
+  Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap, {String? subtitle}) {
+    return InkWell(
+      onTap: onTap,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 40, color: color),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
