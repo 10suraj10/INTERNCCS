@@ -4,6 +4,7 @@ import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/exam_viewmodel.dart';
 import 'mcq_exam_view.dart';
 import 'student_question_bank_view.dart';
+import 'subjective_questions_view.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -89,6 +90,20 @@ class _DashboardState extends State<Dashboard> {
                       );
                     },
                     subtitle: "${exams.bankQuestions.length} Items",
+                  ),
+
+                  _buildMenuCard(
+                    context,
+                    "Questions",
+                    Icons.description,
+                    Colors.green,
+                        () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SubjectiveQuestionsView()),
+                      );
+                    },
+                    subtitle: "View Questions",
                   ),
                 ],
               ),

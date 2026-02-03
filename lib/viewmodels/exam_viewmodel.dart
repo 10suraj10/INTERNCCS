@@ -14,11 +14,22 @@ class ExamViewModel extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     String? data = prefs.getString('question_bank_data');
 
+    List<Question> loadedQuestions = [];
+
+    // 1. Load from storage
     if (data != null) {
       List<dynamic> jsonList = json.decode(data);
-      _bankQuestions = jsonList.map((item) => Question.fromMap(item)).toList();
-      notifyListeners(); // This tells the UI to refresh
+      loadedQuestions = jsonList.map((item) => Question.fromMap(item)).toList();
     }
+
+    // 2. Add dummy questions if they aren't already represented (optional, but ensures something is visible)
+    // For simplicity, we'll just ensure bankQuestions has what's in storage
+    _bankQuestions = loadedQuestions;
+    
+    // Also populate 'exams' list for any legacy views
+    loadExams();
+
+    notifyListeners();
   }
 
   void loadExams() {
@@ -41,7 +52,10 @@ class ExamViewModel extends ChangeNotifier {
         questions: questions,
       ),
     ];
-
-    notifyListeners();
+    
+    // If bank is empty, let's at least show these dummy ones
+    if (_bankQuestions.isEmpty) {
+       _bankQuestions.addAll(questions);
+    }
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
-import 'add_mcq_screen.dart';
 import 'add_question_screen.dart';
 import 'question_bank_screen.dart';
 
@@ -42,19 +41,8 @@ class TeacherDashboard extends StatelessWidget {
                 mainAxisSpacing: 10,
                 children: [
                   _buildMenuCard(
-                    context,  "MCQ Question",
-                    Icons.quiz,
-                    Colors.blue,
-                        () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AddMcqScreen()),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
                     context,
-                    "Questions",
+                    "Add Questions",
                     Icons.description,
                     Colors.green,
                         () {

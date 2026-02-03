@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../data/mcq_dummy.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/exam_viewmodel.dart';
 
 class MCQExamView extends StatefulWidget {
   const MCQExamView({super.key});
@@ -9,61 +10,65 @@ class MCQExamView extends StatefulWidget {
 }
 
 class _MCQExamViewState extends State<MCQExamView> {
-  List<int?> selected = List.filled(mcqQuestions.length, null);
+  Map<int, int?> selected = {};
   bool submitted = false;
 
   @override
   Widget build(BuildContext context) {
+    final exams = context.watch<ExamViewModel>();
+    final mcqs = exams.bankQuestions.where((q) => q.type == 'MCQ').toList();
+
     return Scaffold(
       appBar: AppBar(title: const Text("MCQ Exam")),
-      body: ListView.builder(
-        itemCount: mcqQuestions.length,
-        itemBuilder: (_, i) {
-          final q = mcqQuestions[i];
-          final options = List<String>.from(q["options"] as List);
+      body: mcqs.isEmpty
+          ? const Center(child: Text("No MCQ questions available."))
+          : ListView.builder(
+              itemCount: mcqs.length,
+              itemBuilder: (_, i) {
+                final q = mcqs[i];
+                final options = q.options ?? [];
 
-          return Card(
-            margin: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text(q["q"] as String),
-                ),
-
-                ...List.generate(options.length, (o) {
-                  return RadioListTile<int>(
-                    value: o,
-                    groupValue: selected[i],
-                    title: Text(options[o]),
-                    onChanged:
-                    submitted ? null : (v) => setState(() => selected[i] = v),
-                  );
-                }),
-
-                if (submitted)
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(
-                      selected[i] == (q["answer"] as int)
-                          ? "✔ Correct"
-                          : "❌ Wrong",
-                      style: TextStyle(
-                        color: selected[i] == (q["answer"] as int)
-                            ? Colors.green
-                            : Colors.red,
+                return Card(
+                  margin: const EdgeInsets.all(12),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text(q.text),
                       ),
-                    ),
-                  )
-              ],
+                      ...List.generate(options.length, (o) {
+                        return RadioListTile<int>(
+                          value: o,
+                          groupValue: selected[i],
+                          title: Text(options[o]),
+                          onChanged: submitted
+                              ? null
+                              : (v) => setState(() => selected[i] = v),
+                        );
+                      }),
+                      if (submitted)
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            options[selected[i] ?? -1] == q.correctAnswer
+                                ? "✔ Correct"
+                                : "❌ Wrong",
+                            style: TextStyle(
+                              color: options[selected[i] ?? -1] == q.correctAnswer
+                                  ? Colors.green
+                                  : Colors.red,
+                            ),
+                          ),
+                        )
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
-          onPressed: () => setState(() => submitted = true),
+          onPressed: mcqs.isEmpty ? null : () => setState(() => submitted = true),
           child: const Text("Submit"),
         ),
       ),

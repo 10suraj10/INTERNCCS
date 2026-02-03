@@ -4,6 +4,10 @@ class Question {
   final String type; // 'MCQ', 'Subjective', or 'Bank'
   final List<String>? options;
   final String? correctAnswer;
+  final String? program;
+  final String? className;
+  final String? subject;
+  final String? marks;
 
   Question({
     required this.text,
@@ -11,6 +15,10 @@ class Question {
     required this.type,
     this.options,
     this.correctAnswer,
+    this.program,
+    this.className,
+    this.subject,
+    this.marks,
   });
 
   Map<String, dynamic> toMap() {
@@ -20,6 +28,10 @@ class Question {
       'type': type,
       'options': options,
       'correctAnswer': correctAnswer,
+      'program': program,
+      'className': className,
+      'subject': subject,
+      'marks': marks,
     };
   }
 
@@ -30,6 +42,10 @@ class Question {
       type: map['type'] ?? 'Bank',
       options: map['options'] != null ? List<String>.from(map['options']) : null,
       correctAnswer: map['correctAnswer'],
+      program: map['program'],
+      className: map['className'],
+      subject: map['subject'],
+      marks: map['marks'],
     );
   }
 }

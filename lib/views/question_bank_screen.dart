@@ -14,24 +14,31 @@ class QuestionBankScreen extends StatefulWidget {
 
 class _QuestionBankScreenState extends State<QuestionBankScreen> {
   final _questionController = TextEditingController();
+  final _marksController = TextEditingController();
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  final List<Map<String, dynamic>> _fullBank = [];
 
-  // This list will hold the questions added during this session
-  final List<Map<String, dynamic>> _tempBank = [];
+  @override
+  void initState() {
+    super.initState();
+    _loadFromStorage();
+  }
 
-  Future<void> _saveToStorage(Question newQuestion) async {
+  Future<void> _loadFromStorage() async {
     final prefs = await SharedPreferences.getInstance();
-
-    // 1. Get existing questions
     String? savedData = prefs.getString('question_bank_data');
-    List<dynamic> jsonList = savedData != null ? json.decode(savedData) : [];
+    if (savedData != null) {
+      setState(() {
+        _fullBank.clear();
+        _fullBank.addAll(List<Map<String, dynamic>>.from(json.decode(savedData)));
+      });
+    }
+  }
 
-    // 2. Add new question
-    jsonList.add(newQuestion.toMap());
-
-    // 3. Save back to phone storage
-    await prefs.setString('question_bank_data', json.encode(jsonList));
+  Future<void> _saveAllToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('question_bank_data', json.encode(_fullBank));
   }
 
   Future<void> _pickImage() async {
@@ -48,23 +55,32 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
 
     final newQuest = Question(
       text: _questionController.text,
-      imagePath: _selectedImage?.path, // Save the path string
+      marks: _marksController.text,
+      imagePath: _selectedImage?.path,
       type: 'Bank',
     );
 
-    await _saveToStorage(newQuest); // Save to disk!
-
     setState(() {
-      _tempBank.add(newQuest.toMap());
+      _fullBank.add(newQuest.toMap());
       _questionController.clear();
+      _marksController.clear();
       _selectedImage = null;
     });
 
+    await _saveAllToStorage();
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Question added to local bank!")),
+        const SnackBar(content: Text("Question added to bank!")),
       );
     }
+  }
+
+  void _deleteQuestion(int index) async {
+    setState(() {
+      _fullBank.removeAt(index);
+    });
+    await _saveAllToStorage();
   }
 
   @override
@@ -73,7 +89,6 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
       appBar: AppBar(title: const Text("Question Bank Builder")),
       body: Column(
         children: [
-          // TOP PART: Input area
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -87,15 +102,21 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 10),
-
-                // Show image preview only if an image is picked
+                TextField(
+                  controller: _marksController,
+                  decoration: const InputDecoration(
+                    labelText: "Marks",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 10),
                 if (_selectedImage != null)
                   Container(
                     height: 100,
                     margin: const EdgeInsets.only(bottom: 10),
                     child: Image.file(_selectedImage!),
                   ),
-
                 Row(
                   children: [
                     ElevatedButton.icon(
@@ -109,36 +130,35 @@ class _QuestionBankScreenState extends State<QuestionBankScreen> {
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white),
                       onPressed: _addQuestionToList,
-                      child: const Text("Add to List"),
+                      child: const Text("Add to Bank"),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-
           const Divider(thickness: 2),
-
-          // BOTTOM PART: The List of questions already added
           Expanded(
-            child: ListView.builder(
-              itemCount: _tempBank.length,
-              itemBuilder: (context, index) {
-                final item = _tempBank[index];
-                return ListTile(
-                  leading: CircleAvatar(child: Text("${index + 1}")),
-                  title: Text(item['text'] ?? ""),
-                  subtitle: item['imagePath'] != null
-                      ? const Text("📎 Has Image Attachment",
-                          style: TextStyle(color: Colors.blue))
-                      : const Text("Text Only"),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => setState(() => _tempBank.removeAt(index)),
+            child: _fullBank.isEmpty
+                ? const Center(child: Text("No questions in the bank yet."))
+                : ListView.builder(
+                    itemCount: _fullBank.length,
+                    itemBuilder: (context, index) {
+                      final item = _fullBank[index];
+                      return Card(
+                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: ListTile(
+                          leading: CircleAvatar(child: Text("${index + 1}")),
+                          title: Text(item['text'] ?? ""),
+                          subtitle: Text("Type: ${item['type'] ?? 'Bank'} | Marks: ${item['marks'] ?? '0'}"),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteQuestion(index),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

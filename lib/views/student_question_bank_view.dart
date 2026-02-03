@@ -9,6 +9,9 @@ class StudentQuestionBankView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final exams = context.watch<ExamViewModel>();
+    
+    // FILTER: Show only questions added via the "Question Bank" tool (type: 'Bank')
+    final bankOnlyQuestions = exams.bankQuestions.where((q) => q.type == 'Bank').toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -19,16 +22,16 @@ class StudentQuestionBankView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("${exams.bankQuestions.length} Items Available",
+            Text("${bankOnlyQuestions.length} Items Available",
                 style: const TextStyle(color: Colors.grey, fontSize: 16)),
             const SizedBox(height: 10),
             Expanded(
-              child: exams.bankQuestions.isEmpty
-                  ? const Center(child: Text("No questions shared by teachers yet."))
+              child: bankOnlyQuestions.isEmpty
+                  ? const Center(child: Text("No items in the question bank yet."))
                   : ListView.builder(
-                      itemCount: exams.bankQuestions.length,
+                      itemCount: bankOnlyQuestions.length,
                       itemBuilder: (context, index) {
-                        final q = exams.bankQuestions[index];
+                        final q = bankOnlyQuestions[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: 2,
@@ -43,12 +46,12 @@ class StudentQuestionBankView extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: Colors.blue.withOpacity(0.1),
+                                        color: Colors.orange.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: Text(q.type,
-                                          style: const TextStyle(
-                                              color: Colors.blue,
+                                      child: const Text("Bank Item",
+                                          style: TextStyle(
+                                              color: Colors.orange,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold)),
                                     ),
@@ -68,22 +71,6 @@ class StudentQuestionBankView extends StatelessWidget {
                                         width: double.infinity,
                                         fit: BoxFit.cover),
                                   ),
-                                ],
-                                if (q.type == 'MCQ' && q.options != null) ...[
-                                  const SizedBox(height: 10),
-                                  ...q.options!.map((opt) => Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Row(
-                                          children: [
-                                            const Icon(
-                                                Icons.radio_button_unchecked,
-                                                size: 16,
-                                                color: Colors.grey),
-                                            const SizedBox(width: 8),
-                                            Text(opt),
-                                          ],
-                                        ),
-                                      )),
                                 ],
                               ],
                             ),

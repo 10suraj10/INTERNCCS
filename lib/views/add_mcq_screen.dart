@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../models/question_model.dart';
 
 class AddMcqScreen extends StatefulWidget {
   const AddMcqScreen({super.key});
@@ -8,25 +11,70 @@ class AddMcqScreen extends StatefulWidget {
 }
 
 class _AddMcqScreenState extends State<AddMcqScreen> {
-  // Controllers for the question and the 4 options
   final _questionController = TextEditingController();
   final _optAController = TextEditingController();
   final _optBController = TextEditingController();
   final _optCController = TextEditingController();
   final _optDController = TextEditingController();
 
-  String _selectedCorrectOption = 'A'; // Default correct answer
+  String _selectedCorrectOption = 'A';
+
+  Future<void> _saveMCQ() async {
+    if (_questionController.text.isEmpty ||
+        _optAController.text.isEmpty ||
+        _optBController.text.isEmpty ||
+        _optCController.text.isEmpty ||
+        _optDController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
+    final options = [
+      _optAController.text,
+      _optBController.text,
+      _optCController.text,
+      _optDController.text,
+    ];
+
+    String correctAnswer = "";
+    if (_selectedCorrectOption == 'A') correctAnswer = _optAController.text;
+    if (_selectedCorrectOption == 'B') correctAnswer = _optBController.text;
+    if (_selectedCorrectOption == 'C') correctAnswer = _optCController.text;
+    if (_selectedCorrectOption == 'D') correctAnswer = _optDController.text;
+
+    final newQuestion = Question(
+      text: _questionController.text,
+      type: 'MCQ',
+      options: options,
+      correctAnswer: correctAnswer,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    String? savedData = prefs.getString('question_bank_data');
+    List<dynamic> jsonList = savedData != null ? json.decode(savedData) : [];
+
+    jsonList.add(newQuestion.toMap());
+    await prefs.setString('question_bank_data', json.encode(jsonList));
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("MCQ Saved for Students!")),
+      );
+      Navigator.pop(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Add MCQ Question")),
-      body: SingleChildScrollView( // Allows scrolling if the keyboard covers fields
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Question Field
             TextField(
               controller: _questionController,
               decoration: const InputDecoration(
@@ -35,8 +83,6 @@ class _AddMcqScreenState extends State<AddMcqScreen> {
               ),
             ),
             const SizedBox(height: 15),
-
-            // Options Fields
             _buildOptionField(_optAController, "Option A"),
             const SizedBox(height: 10),
             _buildOptionField(_optBController, "Option B"),
@@ -45,9 +91,8 @@ class _AddMcqScreenState extends State<AddMcqScreen> {
             const SizedBox(height: 10),
             _buildOptionField(_optDController, "Option D"),
             const SizedBox(height: 20),
-
-            // Correct Answer Selector
-            const Text("Select Correct Option:", style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text("Select Correct Option:",
+                style: TextStyle(fontWeight: FontWeight.bold)),
             DropdownButton<String>(
               value: _selectedCorrectOption,
               isExpanded: true,
@@ -64,19 +109,11 @@ class _AddMcqScreenState extends State<AddMcqScreen> {
               },
             ),
             const SizedBox(height: 30),
-
-            // Save Button
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // Logic to save the MCQ will go here
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("MCQ Saved Locally")),
-                  );
-                  Navigator.pop(context);
-                },
+                onPressed: _saveMCQ,
                 child: const Text("Save MCQ"),
               ),
             ),
@@ -86,7 +123,6 @@ class _AddMcqScreenState extends State<AddMcqScreen> {
     );
   }
 
-  // Helper method to create Option TextFields quickly
   Widget _buildOptionField(TextEditingController controller, String label) {
     return TextField(
       controller: controller,
