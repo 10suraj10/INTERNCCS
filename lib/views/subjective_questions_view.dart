@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/exam_viewmodel.dart';
@@ -39,11 +40,18 @@ class SubjectiveQuestionsView extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  "Question ${index + 1}",
-                                  style: const TextStyle(
-                                      color: Colors.blue,
-                                      fontWeight: FontWeight.bold),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "Question ${index + 1}",
+                                      style: const TextStyle(
+                                          color: Colors.blue,
+                                          fontWeight: FontWeight.bold),
+                                    ),
+                                    if (q.marks != null)
+                                      Text("Marks: ${q.marks}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
@@ -51,6 +59,16 @@ class SubjectiveQuestionsView extends StatelessWidget {
                                   style: const TextStyle(
                                       fontSize: 18, fontWeight: FontWeight.w500),
                                 ),
+                                if (q.imagePath != null) ...[
+                                  const SizedBox(height: 12),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(File(q.imagePath!), 
+                                        height: 200, 
+                                        width: double.infinity, 
+                                        fit: BoxFit.cover),
+                                  ),
+                                ],
                                 const SizedBox(height: 16),
                                 const TextField(
                                   maxLines: 5,

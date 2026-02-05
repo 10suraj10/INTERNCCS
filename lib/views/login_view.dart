@@ -14,6 +14,8 @@ class _LoginPageState extends State<LoginView> {
   final passwordController = TextEditingController();
   String role = "Student";
 
+  String get selectedRole => role.toLowerCase();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,7 +90,7 @@ class _LoginPageState extends State<LoginView> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (emailController.text.isEmpty || passwordController.text.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Please enter email and password")),
@@ -96,10 +98,19 @@ class _LoginPageState extends State<LoginView> {
                       return;
                     }
 
-                    context.read<AuthViewModel>().login(
-                      emailController.text,
-                      passwordController.text,
+                    final success = await context.read<AuthViewModel>().login(
+                      emailController.text.trim(),
+                      passwordController.text.trim(),
+                      selectedRole, // 👈 ROLE PASSED HERE
                     );
+
+                    if (!success && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Invalid email, password, or role"),
+                        ),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.login),
                   label: const Text("Sign In"),

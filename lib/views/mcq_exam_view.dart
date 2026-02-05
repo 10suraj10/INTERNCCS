@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/exam_viewmodel.dart';
@@ -31,11 +32,43 @@ class _MCQExamViewState extends State<MCQExamView> {
                 return Card(
                   margin: const EdgeInsets.all(12),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(q.text),
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text("Question ${i + 1}", 
+                                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                                if (q.marks != null)
+                                  Text("Marks: ${q.marks}", 
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(q.text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
                       ),
+                      
+                      if (q.imagePath != null)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(File(q.imagePath!), 
+                                height: 150, 
+                                width: double.infinity, 
+                                fit: BoxFit.cover),
+                          ),
+                        ),
+
+                      const SizedBox(height: 8),
+
                       ...List.generate(options.length, (o) {
                         return RadioListTile<int>(
                           value: o,
@@ -48,12 +81,13 @@ class _MCQExamViewState extends State<MCQExamView> {
                       }),
                       if (submitted)
                         Padding(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(12),
                           child: Text(
                             options[selected[i] ?? -1] == q.correctAnswer
                                 ? "✔ Correct"
-                                : "❌ Wrong",
+                                : "❌ Wrong (Correct: ${q.correctAnswer})",
                             style: TextStyle(
+                              fontWeight: FontWeight.bold,
                               color: options[selected[i] ?? -1] == q.correctAnswer
                                   ? Colors.green
                                   : Colors.red,
@@ -69,7 +103,7 @@ class _MCQExamViewState extends State<MCQExamView> {
         padding: const EdgeInsets.all(12),
         child: ElevatedButton(
           onPressed: mcqs.isEmpty ? null : () => setState(() => submitted = true),
-          child: const Text("Submit"),
+          child: const Text("Submit Exam"),
         ),
       ),
     );

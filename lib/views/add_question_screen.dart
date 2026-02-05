@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/question_model.dart';
@@ -14,6 +16,10 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _marksController = TextEditingController();
   
+  // Image Picking
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+
   // MCQ Options controllers
   final _optAController = TextEditingController();
   final _optBController = TextEditingController();
@@ -57,6 +63,15 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    }
+  }
+
   Future<void> _saveQuestion() async {
     if (_questionController.text.isEmpty) return;
 
@@ -89,6 +104,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       options: options,
       correctAnswer: correctAnswer,
       marks: _marksController.text,
+      imagePath: _selectedImage?.path,
     );
 
     final prefs = await SharedPreferences.getInstance();
@@ -104,6 +120,9 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     _optBController.clear();
     _optCController.clear();
     _optDController.clear();
+    setState(() {
+      _selectedImage = null;
+    });
     
     _loadQuestions();
 
@@ -203,7 +222,22 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Marks Field (Now visible for both types)
+                  // Image Preview
+                  if (_selectedImage != null)
+                    Container(
+                      height: 100,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: Image.file(_selectedImage!),
+                    ),
+
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.add_a_photo),
+                    label: const Text("Add Image"),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Marks Field
                   TextField(
                     controller: _marksController,
                     keyboardType: TextInputType.number,
@@ -252,6 +286,9 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   child: ListTile(
+                    leading: q['imagePath'] != null
+                        ? SizedBox(width: 50, child: Image.file(File(q['imagePath']), fit: BoxFit.cover))
+                        : const Icon(Icons.description),
                     title: Text(q['text'] ?? ""),
                     subtitle: Text("${q['type']} | Marks: ${q['marks'] ?? 'N/A'} | ${q['program']} | Class ${q['className']} | ${q['subject']}"),
                     trailing: IconButton(
