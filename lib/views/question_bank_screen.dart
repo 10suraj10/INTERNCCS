@@ -1,166 +1,106 @@
-import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/question_model.dart';
-import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/exam_viewmodel.dart';
 
-class QuestionBankScreen extends StatefulWidget {
+class QuestionBankScreen extends StatelessWidget {
   const QuestionBankScreen({super.key});
 
   @override
-  State<QuestionBankScreen> createState() => _QuestionBankScreenState();
-}
-
-class _QuestionBankScreenState extends State<QuestionBankScreen> {
-  final _questionController = TextEditingController();
-  final _marksController = TextEditingController();
-  File? _selectedImage;
-  final ImagePicker _picker = ImagePicker();
-  final List<Map<String, dynamic>> _fullBank = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadFromStorage();
-  }
-
-  Future<void> _loadFromStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? savedData = prefs.getString('question_bank_data');
-    if (savedData != null) {
-      setState(() {
-        _fullBank.clear();
-        _fullBank.addAll(List<Map<String, dynamic>>.from(json.decode(savedData)));
-      });
-    }
-  }
-
-  Future<void> _saveAllToStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('question_bank_data', json.encode(_fullBank));
-  }
-
-  Future<void> _pickImage() async {
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      setState(() {
-        _selectedImage = File(image.path);
-      });
-    }
-  }
-
-  void _addQuestionToList() async {
-    if (_questionController.text.isEmpty) return;
-
-    final newQuest = Question(
-      text: _questionController.text,
-      marks: _marksController.text,
-      imagePath: _selectedImage?.path,
-      type: 'Bank',
-    );
-
-    setState(() {
-      _fullBank.add(newQuest.toMap());
-      _questionController.clear();
-      _marksController.clear();
-      _selectedImage = null;
-    });
-
-    await _saveAllToStorage();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Question added to bank!")),
-      );
-    }
-  }
-
-  void _deleteQuestion(int index) async {
-    setState(() {
-      _fullBank.removeAt(index);
-    });
-    await _saveAllToStorage();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final exams = context.watch<ExamViewModel>();
+    
+    // Filter to show only questions explicitly marked for the bank
+    final bankQuestions = exams.bankQuestions.where((q) => q.isForBank).toList();
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Question Bank Builder")),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _questionController,
-                  decoration: const InputDecoration(
-                    labelText: "Enter Question Text",
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _marksController,
-                  decoration: const InputDecoration(
-                    labelText: "Marks",
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 10),
-                if (_selectedImage != null)
-                  Container(
-                    height: 100,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: Image.file(_selectedImage!),
-                  ),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.add_a_photo),
-                      label: const Text("Add Image"),
-                    ),
-                    const Spacer(),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white),
-                      onPressed: _addQuestionToList,
-                      child: const Text("Add to Bank"),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const Divider(thickness: 2),
-          Expanded(
-            child: _fullBank.isEmpty
-                ? const Center(child: Text("No questions in the bank yet."))
-                : ListView.builder(
-                    itemCount: _fullBank.length,
-                    itemBuilder: (context, index) {
-                      final item = _fullBank[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        child: ListTile(
-                          leading: CircleAvatar(child: Text("${index + 1}")),
-                          title: Text(item['text'] ?? ""),
-                          subtitle: Text("Type: ${item['type'] ?? 'Bank'} | Marks: ${item['marks'] ?? '0'}"),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _deleteQuestion(index),
+      appBar: AppBar(
+        title: const Text("Teacher's Question Bank View"),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("${bankQuestions.length} Items Shared with Students",
+                style: const TextStyle(color: Colors.grey, fontSize: 16)),
+            const SizedBox(height: 10),
+            Expanded(
+              child: bankQuestions.isEmpty
+                  ? const Center(child: Text("No items in the question bank yet."))
+                  : ListView.builder(
+                      itemCount: bankQuestions.length,
+                      itemBuilder: (context, index) {
+                        final q = bankQuestions[index];
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          elevation: 2,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(q.type,
+                                          style: const TextStyle(
+                                              color: Colors.orange,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold)),
+                                    ),
+                                    if (q.marks != null)
+                                      Text("Marks: ${q.marks}", 
+                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(q.text,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500)),
+                                if (q.imagePath != null) ...[
+                                  const SizedBox(height: 10),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(File(q.imagePath!),
+                                        height: 150,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover),
+                                  ),
+                                ],
+                                if (q.type == 'MCQ' && q.options != null) ...[
+                                  const SizedBox(height: 10),
+                                  ...q.options!.map((opt) => Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                                Icons.radio_button_unchecked,
+                                                size: 16,
+                                                color: Colors.grey),
+                                            const SizedBox(width: 8),
+                                            Text(opt),
+                                          ],
+                                        ),
+                                      )),
+                                ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

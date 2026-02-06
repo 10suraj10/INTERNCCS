@@ -1,13 +1,14 @@
 class Question {
   final String text;
   final String? imagePath;
-  final String type; // 'MCQ', 'Subjective', or 'Bank'
+  final String type; // 'MCQ' or 'Subjective'
   final List<String>? options;
   final String? correctAnswer;
   final String? program;
   final String? className;
   final String? subject;
   final String? marks;
+  final bool isForBank;
 
   Question({
     required this.text,
@@ -19,6 +20,7 @@ class Question {
     this.className,
     this.subject,
     this.marks,
+    this.isForBank = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,6 +34,7 @@ class Question {
       'className': className,
       'subject': subject,
       'marks': marks,
+      'isForBank': isForBank,
     };
   }
 
@@ -39,13 +42,14 @@ class Question {
     return Question(
       text: map['text'] ?? '',
       imagePath: map['imagePath'],
-      type: map['type'] ?? 'Bank',
+      type: map['type'] ?? 'Subjective',
       options: map['options'] != null ? List<String>.from(map['options']) : null,
       correctAnswer: map['correctAnswer'],
       program: map['program'],
       className: map['className'],
       subject: map['subject'],
       marks: map['marks'],
+      isForBank: map['isForBank'] ?? false,
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/question_model.dart';
+import '../viewmodels/exam_viewmodel.dart';
 
 class AddQuestionScreen extends StatefulWidget {
   const AddQuestionScreen({super.key});
@@ -34,6 +36,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
   String? _selectedClass;
   String _selectedSubject = 'Math';
   String _selectedType = 'Subjective';
+  bool _isForBank = false; 
 
   final Map<String, List<String>> _programClasses = {
     'primary': ['1', '2', '3', '4', '5'],
@@ -105,6 +108,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       correctAnswer: correctAnswer,
       marks: _marksController.text,
       imagePath: _selectedImage?.path,
+      isForBank: _isForBank,
     );
 
     final prefs = await SharedPreferences.getInstance();
@@ -114,6 +118,11 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     allQuestions.add(newQuestion.toMap());
     await prefs.setString('question_bank_data', json.encode(allQuestions));
 
+    // Sync with global Provider
+    if (mounted) {
+      context.read<ExamViewModel>().loadQuestionBank();
+    }
+
     _questionController.clear();
     _marksController.clear();
     _optAController.clear();
@@ -122,6 +131,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     _optDController.clear();
     setState(() {
       _selectedImage = null;
+      _isForBank = false;
     });
     
     _loadQuestions();
@@ -140,6 +150,11 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       List<dynamic> allQuestions = json.decode(savedData);
       allQuestions.removeAt(index);
       await prefs.setString('question_bank_data', json.encode(allQuestions));
+      
+      if (mounted) {
+        context.read<ExamViewModel>().loadQuestionBank();
+      }
+      
       _loadQuestions();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Question deleted")));
@@ -159,7 +174,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Program Dropdown
                   const Text("Program Type", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
@@ -176,7 +190,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Class Dropdown
                   const Text("Class", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
@@ -188,7 +201,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Subject Dropdown
                   const Text("Subject", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
@@ -200,7 +212,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Question Type Dropdown
                   const Text("Question Type", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
@@ -222,7 +233,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Image Preview
                   if (_selectedImage != null)
                     Container(
                       height: 100,
@@ -237,7 +247,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Marks Field
                   TextField(
                     controller: _marksController,
                     keyboardType: TextInputType.number,
@@ -263,6 +272,18 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     ),
                   ],
 
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Text("Push to Question Bank", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      Switch(
+                        value: _isForBank,
+                        onChanged: (val) => setState(() => _isForBank = val),
+                      ),
+                    ],
+                  ),
+
                   const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
@@ -283,6 +304,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
               itemCount: _savedQuestions.length,
               itemBuilder: (context, index) {
                 final q = _savedQuestions[index];
+                final bool isBank = q['isForBank'] ?? false;
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   child: ListTile(
@@ -290,7 +312,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                         ? SizedBox(width: 50, child: Image.file(File(q['imagePath']), fit: BoxFit.cover))
                         : const Icon(Icons.description),
                     title: Text(q['text'] ?? ""),
-                    subtitle: Text("${q['type']} | Marks: ${q['marks'] ?? 'N/A'} | ${q['program']} | Class ${q['className']} | ${q['subject']}"),
+                    subtitle: Text("${q['type']} | Bank: ${isBank ? 'Yes' : 'No'} | Marks: ${q['marks'] ?? 'N/A'} | ${q['program']} | Class ${q['className']} | ${q['subject']}"),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _deleteQuestion(index),

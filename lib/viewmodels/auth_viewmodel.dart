@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/dummy_users.dart';
 
 class AuthViewModel extends ChangeNotifier {
-  bool isLoading = false;
+  bool isLoading = false;git
   bool isLoggedIn = false;
   String role = "";
 

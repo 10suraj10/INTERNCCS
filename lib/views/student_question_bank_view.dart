@@ -10,8 +10,8 @@ class StudentQuestionBankView extends StatelessWidget {
   Widget build(BuildContext context) {
     final exams = context.watch<ExamViewModel>();
     
-    // FILTER: Show only questions added via the "Question Bank" tool (type: 'Bank')
-    final bankOnlyQuestions = exams.bankQuestions.where((q) => q.type == 'Bank').toList();
+    // FILTER: Show questions explicitly marked for the bank by the teacher
+    final bankQuestions = exams.bankQuestions.where((q) => q.isForBank).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -22,16 +22,16 @@ class StudentQuestionBankView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("${bankOnlyQuestions.length} Items Available",
+            Text("${bankQuestions.length} Items Available",
                 style: const TextStyle(color: Colors.grey, fontSize: 16)),
             const SizedBox(height: 10),
             Expanded(
-              child: bankOnlyQuestions.isEmpty
+              child: bankQuestions.isEmpty
                   ? const Center(child: Text("No items in the question bank yet."))
                   : ListView.builder(
-                      itemCount: bankOnlyQuestions.length,
+                      itemCount: bankQuestions.length,
                       itemBuilder: (context, index) {
-                        final q = bankOnlyQuestions[index];
+                        final q = bankQuestions[index];
                         return Card(
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: 2,
@@ -41,6 +41,7 @@ class StudentQuestionBankView extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -49,12 +50,14 @@ class StudentQuestionBankView extends StatelessWidget {
                                         color: Colors.orange.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text("Bank Item",
-                                          style: TextStyle(
+                                      child: Text(q.type,
+                                          style: const TextStyle(
                                               color: Colors.orange,
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold)),
                                     ),
+                                    if (q.marks != null)
+                                      Text("Marks: ${q.marks}", style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
                                   ],
                                 ),
                                 const SizedBox(height: 8),
@@ -71,6 +74,19 @@ class StudentQuestionBankView extends StatelessWidget {
                                         width: double.infinity,
                                         fit: BoxFit.cover),
                                   ),
+                                ],
+                                if (q.type == 'MCQ' && q.options != null) ...[
+                                  const SizedBox(height: 10),
+                                  ...q.options!.map((opt) => Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.radio_button_unchecked, size: 16, color: Colors.grey),
+                                        const SizedBox(width: 8),
+                                        Text(opt),
+                                      ],
+                                    ),
+                                  )).toList(),
                                 ],
                               ],
                             ),
