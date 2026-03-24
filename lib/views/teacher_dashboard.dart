@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import 'add_question_screen.dart';
 import 'question_bank_screen.dart';
+import 'add_exercise_screen.dart';
 
 class TeacherDashboard extends StatelessWidget {
   const TeacherDashboard({super.key});
@@ -13,7 +14,6 @@ class TeacherDashboard extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Teacher Dashboard"),
         actions: [
-          // This is the Logout button you asked for
           TextButton.icon(
             onPressed: () => context.read<AuthViewModel>().logout(),
             icon: const Icon(Icons.logout),
@@ -33,10 +33,9 @@ class TeacherDashboard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // GridView creates the side-by-side buttons (Cards)
             Expanded(
               child: GridView.count(
-                crossAxisCount: 2, // 2 items per row
+                crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 children: [
@@ -45,7 +44,7 @@ class TeacherDashboard extends StatelessWidget {
                     "Add Questions",
                     Icons.description,
                     Colors.green,
-                        () {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const AddQuestionScreen()),
@@ -54,10 +53,22 @@ class TeacherDashboard extends StatelessWidget {
                   ),
                   _buildMenuCard(
                     context,
+                    "Manage Exercises",
+                    Icons.fitness_center,
+                    Colors.purple,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const AddExerciseScreen()),
+                      );
+                    },
+                  ),
+                  _buildMenuCard(
+                    context,
                     "Question Bank",
                     Icons.storage,
                     Colors.orange,
-                        () {
+                    () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const QuestionBankScreen()),
@@ -73,7 +84,6 @@ class TeacherDashboard extends StatelessWidget {
     );
   }
 
-  // A helper function to create buttons easily
   Widget _buildMenuCard(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../models/program_model.dart';
 import '../models/question_model.dart';
 import '../viewmodels/exam_viewmodel.dart';
 
@@ -18,11 +19,9 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
   final TextEditingController _questionController = TextEditingController();
   final TextEditingController _marksController = TextEditingController();
   
-  // Image Picking
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
 
-  // MCQ Options controllers
   final _optAController = TextEditingController();
   final _optBController = TextEditingController();
   final _optCController = TextEditingController();
@@ -31,27 +30,30 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
 
   List<Map<String, dynamic>> _savedQuestions = [];
 
-  // Dropdown values
-  String _selectedProgram = 'primary';
+  // Use IDs for selection to avoid reference comparison issues with Model objects
+  int? _selectedProgramId;
   String? _selectedClass;
-  String _selectedSubject = 'Math';
+  String? _selectedSubject;
   String _selectedType = 'Subjective';
   bool _isForBank = false; 
 
-  final Map<String, List<String>> _programClasses = {
-    'primary': ['1', '2', '3', '4', '5'],
-    'secondary': ['6', '7', '8', '9', '10'],
-    '+2': ['11', '12'],
-    'bachelor': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
-    'masters': ['1st Year', '2nd Year'],
+  // Exhaustive Program to Class mapping
+  final Map<String, List<String>> _programToClasses = {
+    'Primary': ['Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8'],
+    'Secondary': ['Class 9', 'Class 10'],
+    '+2': ['Class 11', 'Class 12'],
+    'Bachelor': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+    'Bachelor Program': ['1st Year', '2nd Year', '3rd Year', '4th Year'],
+    'Masters Program': ['1st Year', '2nd Year'],
+    'Masters': ['1st Year', '2nd Year'],
   };
-
-  final List<String> _subjects = ['Math', 'Science', 'English', 'Social Studies', 'Computer'];
 
   @override
   void initState() {
     super.initState();
-    _selectedClass = _programClasses[_selectedProgram]![0];
+    Future.microtask(() {
+      context.read<ExamViewModel>().fetchFilterData();
+    });
     _loadQuestions();
   }
 
@@ -77,17 +79,15 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
 
   Future<void> _saveQuestion() async {
     if (_questionController.text.isEmpty) return;
+    
+    final exams = context.read<ExamViewModel>();
+    final program = exams.bankPrograms.firstWhere((p) => p.id == _selectedProgramId, orElse: () => exams.bankPrograms.first);
 
     List<String>? options;
     String? correctAnswer;
 
     if (_selectedType == 'MCQ') {
-      options = [
-        _optAController.text,
-        _optBController.text,
-        _optCController.text,
-        _optDController.text,
-      ];
+      options = [_optAController.text, _optBController.text, _optCController.text, _optDController.text];
       if (options.any((opt) => opt.isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please fill all MCQ options")));
         return;
@@ -101,7 +101,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     final newQuestion = Question(
       text: _questionController.text,
       type: _selectedType,
-      program: _selectedProgram,
+      program: program.programType,
       className: _selectedClass,
       subject: _selectedSubject,
       options: options,
@@ -118,7 +118,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     allQuestions.add(newQuestion.toMap());
     await prefs.setString('question_bank_data', json.encode(allQuestions));
 
-    // Sync with global Provider
     if (mounted) {
       context.read<ExamViewModel>().loadQuestionBank();
     }
@@ -137,9 +136,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
     _loadQuestions();
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Question saved!")),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Question saved!")));
     }
   }
 
@@ -150,20 +147,33 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       List<dynamic> allQuestions = json.decode(savedData);
       allQuestions.removeAt(index);
       await prefs.setString('question_bank_data', json.encode(allQuestions));
-      
-      if (mounted) {
-        context.read<ExamViewModel>().loadQuestionBank();
-      }
-      
+      if (mounted) context.read<ExamViewModel>().loadQuestionBank();
       _loadQuestions();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Question deleted")));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Question deleted")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final exams = context.watch<ExamViewModel>();
+    
+    // Auto-select first program if nothing is selected yet
+    if (_selectedProgramId == null && exams.bankPrograms.isNotEmpty) {
+      _selectedProgramId = exams.bankPrograms.first.id;
+      final pType = exams.bankPrograms.first.programType;
+      if (_programToClasses.containsKey(pType)) {
+        _selectedClass = _programToClasses[pType]!.first;
+      }
+    }
+    
+    // Auto-select first subject if nothing is selected yet
+    if (_selectedSubject == null && exams.subjects.isNotEmpty) {
+      _selectedSubject = exams.subjects.first['subject_name'];
+    }
+
+    final currentProgram = exams.bankPrograms.firstWhere((p) => p.id == _selectedProgramId, orElse: () => exams.bankPrograms.isNotEmpty ? exams.bankPrograms.first : Datum(id: -1, programType: '', programTypeCode: '', status: '', createdBy: 0, updatedBy: 0, createdAt: DateTime.now(), updatedAt: DateTime.now()));
+    final classList = _programToClasses[currentProgram.programType] ?? [];
+
     return Scaffold(
       appBar: AppBar(title: const Text("Manage Questions")),
       body: SingleChildScrollView(
@@ -175,16 +185,22 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text("Program Type", style: TextStyle(fontWeight: FontWeight.bold)),
-                  DropdownButton<String>(
+                  DropdownButton<int>(
                     isExpanded: true,
-                    value: _selectedProgram,
-                    items: _programClasses.keys.map((String value) {
-                      return DropdownMenuItem<String>(value: value, child: Text(value.toUpperCase()));
+                    hint: const Text("Select Program"),
+                    value: _selectedProgramId,
+                    items: exams.bankPrograms.map((program) {
+                      return DropdownMenuItem<int>(value: program.id, child: Text(program.programType));
                     }).toList(),
                     onChanged: (val) {
                       setState(() {
-                        _selectedProgram = val!;
-                        _selectedClass = _programClasses[_selectedProgram]![0];
+                        _selectedProgramId = val;
+                        final p = exams.bankPrograms.firstWhere((p) => p.id == val);
+                        if (_programToClasses.containsKey(p.programType)) {
+                          _selectedClass = _programToClasses[p.programType]!.first;
+                        } else {
+                          _selectedClass = null;
+                        }
                       });
                     },
                   ),
@@ -193,9 +209,10 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   const Text("Class", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
+                    hint: const Text("Select Class"),
                     value: _selectedClass,
-                    items: _programClasses[_selectedProgram]!.map((String value) {
-                      return DropdownMenuItem<String>(value: value, child: Text("Class $value"));
+                    items: classList.map((String value) {
+                      return DropdownMenuItem<String>(value: value, child: Text(value));
                     }).toList(),
                     onChanged: (val) => setState(() => _selectedClass = val),
                   ),
@@ -204,11 +221,13 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   const Text("Subject", style: TextStyle(fontWeight: FontWeight.bold)),
                   DropdownButton<String>(
                     isExpanded: true,
+                    hint: const Text("Select Subject"),
                     value: _selectedSubject,
-                    items: _subjects.map((String value) {
-                      return DropdownMenuItem<String>(value: value, child: Text(value));
+                    items: exams.subjects.map((s) {
+                      final name = s['subject_name'] as String;
+                      return DropdownMenuItem<String>(value: name, child: Text(name));
                     }).toList(),
-                    onChanged: (val) => setState(() => _selectedSubject = val!),
+                    onChanged: (val) => setState(() => _selectedSubject = val),
                   ),
                   const SizedBox(height: 10),
 
@@ -226,25 +245,14 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   TextField(
                     controller: _questionController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: "Question Text",
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: "Question Text", border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 10),
 
                   if (_selectedImage != null)
-                    Container(
-                      height: 100,
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: Image.file(_selectedImage!),
-                    ),
+                    Container(height: 100, margin: const EdgeInsets.only(bottom: 10), child: Image.file(_selectedImage!)),
 
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.add_a_photo),
-                    label: const Text("Add Image"),
-                  ),
+                  ElevatedButton.icon(onPressed: _pickImage, icon: const Icon(Icons.add_a_photo), label: const Text("Add Image")),
                   const SizedBox(height: 10),
 
                   TextField(
@@ -277,10 +285,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                     children: [
                       const Text("Push to Question Bank", style: TextStyle(fontWeight: FontWeight.bold)),
                       const Spacer(),
-                      Switch(
-                        value: _isForBank,
-                        onChanged: (val) => setState(() => _isForBank = val),
-                      ),
+                      Switch(value: _isForBank, onChanged: (val) => setState(() => _isForBank = val)),
                     ],
                   ),
 
@@ -288,10 +293,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 45,
-                    child: ElevatedButton(
-                      onPressed: _saveQuestion,
-                      child: const Text("Save Question"),
-                    ),
+                    child: ElevatedButton(onPressed: _saveQuestion, child: const Text("Save Question")),
                   ),
                 ],
               ),
@@ -313,10 +315,7 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
                         : const Icon(Icons.description),
                     title: Text(q['text'] ?? ""),
                     subtitle: Text("${q['type']} | Bank: ${isBank ? 'Yes' : 'No'} | Marks: ${q['marks'] ?? 'N/A'} | ${q['program']} | Class ${q['className']} | ${q['subject']}"),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteQuestion(index),
-                    ),
+                    trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteQuestion(index)),
                   ),
                 );
               },

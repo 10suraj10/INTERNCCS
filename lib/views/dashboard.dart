@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/exam_viewmodel.dart';
+import '../viewmodels/exercise_viewmodel.dart';
 import 'mcq_exam_view.dart';
 import 'student_question_bank_view.dart';
-import 'subjective_questions_view.dart';
+import 'student_subject_list_view.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -20,15 +21,17 @@ class _DashboardState extends State<Dashboard> {
   }
 
   void _refreshData() {
-    Future.microtask(() =>
-        context.read<ExamViewModel>().loadQuestionBank()
-    );
+    Future.microtask(() {
+      context.read<ExamViewModel>().loadQuestionBank();
+      context.read<ExerciseViewModel>().loadExercises();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthViewModel>();
     final exams = context.watch<ExamViewModel>();
+    final exercises = context.watch<ExerciseViewModel>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -94,16 +97,16 @@ class _DashboardState extends State<Dashboard> {
 
                   _buildMenuCard(
                     context,
-                    "Questions",
-                    Icons.description,
-                    Colors.green,
-                        () {
+                    "Exercises",
+                    Icons.fitness_center,
+                    Colors.purple,
+                    () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SubjectiveQuestionsView()),
+                        MaterialPageRoute(builder: (_) => const StudentSubjectListView()),
                       );
                     },
-                    subtitle: "View Questions",
+                    subtitle: "${exercises.exercises.length} Available",
                   ),
                 ],
               ),
